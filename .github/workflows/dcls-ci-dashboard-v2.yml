@@ -1,0 +1,169 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# DCLS CVA6 CI Dashboard Version 2 — Build and Deploy to GitHub Pages
+#
+# Triggered when any of the three CI workflows complete,
+# or manually / on a daily schedule.
+#
+# Tracks three workflows:
+#   ci              — ci.yml (Legacy CVA6 CI)
+#   dcls-ci-tier1-v2   — Version 2 Tier 1 PR Gate
+#   dcls-ci-tier2-v2   — Version 2 Tier 2 Nightly (future)
+#
+# Data persistence: JSON history is stored on the gh-pages-dcls-ci-v2 branch
+# under data/ and merged incrementally on each run.
+#
+# First-time setup:
+#   1. GitHub Settings → Pages → Source: GitHub Actions
+#   2. Run this workflow manually via workflow_dispatch to initialize
+
+name: dcls-ci-dashboard-v2
+
+on:
+  # Trigger when any tracked CI workflow completes
+  workflow_run:
+    workflows:
+      - ci
+      - dcls-ci-tier1-v2
+      - dcls-ci-tier2-v2
+    types: [completed]
+
+  # Manual trigger (useful for initialization and debugging)
+  workflow_dispatch:
+
+  # Daily refresh to catch any missed events
+  schedule:
+    - cron: '0 4 * * *'  # 04:00 UTC daily
+
+# Queue runs — prevents write conflicts on gh-pages-dcls-ci-v2 branch
+concurrency:
+  group: dcls-ci-dashboard-v2-deploy
+  cancel-in-progress: false
+
+permissions:
+  actions: read      # Read workflow runs via GitHub API (gh api /actions/workflows/...)
+  contents: write    # Push to gh-pages-dcls-ci-v2 branch
+  pages: write       # Deploy to GitHub Pages
+  id-token: write    # OIDC token for Pages deployment
+
+jobs:
+  # ============================================================
+  # Job 1: Collect data and build the dashboard HTML
+  # ============================================================
+  build:
+    name: Build Dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Restore history data from gh-pages-dcls-ci-v2
+        run: |
+          mkdir -p /tmp/dash-data
+          if git ls-remote --heads origin gh-pages-dcls-ci-v2 | grep -q gh-pages-dcls-ci-v2; then
+            git fetch origin gh-pages-dcls-ci-v2 --depth=1
+            git checkout origin/gh-pages-dcls-ci-v2 -- data/ 2>/dev/null && \
+              cp -r data/* /tmp/dash-data/ 2>/dev/null || \
+              echo "No existing data on gh-pages-dcls-ci-v2, starting fresh"
+          else
+            echo "gh-pages-dcls-ci-v2 branch does not exist yet, starting fresh"
+          fi
+
+      - name: Collect CI data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 .github/scripts/dcls-ci-dashboard/collect_data.py \
+            --repo "${{ github.repository }}" \
+            --data-dir /tmp/dash-data \
+            --fetch-count 10
+
+      - name: Install Jinja2
+        run: pip install jinja2
+
+      - name: Generate dashboard HTML
+        run: |
+          python3 .github/scripts/dcls-ci-dashboard/generate_dashboard.py \
+            --data-dir /tmp/dash-data \
+            --output-dir /tmp/dash-site \
+            --repo "${{ github.repository }}"
+
+      - name: Copy data alongside HTML (for Pages artifact)
+        run: cp -r /tmp/dash-data /tmp/dash-site/data
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/dash-site
+
+      - name: Upload data for persistence job
+        uses: actions/upload-artifact@v4
+        with:
+          name: dcls-ci-dashboard-v2-data
+          path: /tmp/dash-data/
+          retention-days: 7
+
+  # ============================================================
+  # Job 2: Deploy to GitHub Pages
+  # ============================================================
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true   # Don't block data persistence if Pages isn't enabled yet
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ============================================================
+  # Job 3: Persist JSON data to gh-pages-dcls-ci-v2 branch
+  # ============================================================
+  persist-data:
+    name: Persist Data
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gh-pages-dcls-ci-v2 branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages-dcls-ci-v2
+          fetch-depth: 1
+        continue-on-error: true
+
+      - name: Initialize gh-pages-dcls-ci-v2 branch if needed
+        run: |
+          if [ ! -d ".git" ]; then
+            git init
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+            git checkout --orphan gh-pages-dcls-ci-v2
+            echo "# DCLS CVA6 CI Dashboard Version 2 Data" > README.md
+            git add README.md
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "Initialize gh-pages-dcls-ci-v2 branch"
+          fi
+
+      - name: Download updated data
+        uses: actions/download-artifact@v4
+        with:
+          name: dcls-ci-dashboard-v2-data
+          path: data/
+
+      - name: Commit and push data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No data changes to commit"
+          else
+            git commit -m "Update dcls-ci dashboard v2 data [skip ci]"
+            # Use HEAD:gh-pages-dcls-ci-v2 so this works regardless of local branch name.
+            # On first run (branch didn't exist), local branch is 'master' after a
+            # failed actions/checkout; HEAD:ref pushes current HEAD to the remote name.
+            git push origin HEAD:gh-pages-dcls-ci-v2
+          fi

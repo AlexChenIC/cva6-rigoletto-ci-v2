@@ -1,0 +1,286 @@
+# ================================================================================
+# DCLS CVA6 CI — Version 2 Tier 1 PR Gate Workflow
+# ================================================================================
+#
+# PURPOSE:
+#   PR gate / smoke gate — fast multi-category test for rv32 target configs.
+#   Target: ≤ 15 min wall-clock (jobs run in parallel).
+#
+# SUPPORTED CONFIGS (ADR-003):
+#   cv32a60x — rv32imc + Zba/Zbb, no MMU (primary, 47/47 ISA PASS locally)
+#   cv32a65x — rv32imc variant 65x, no MMU (upstream ci.yml green config)
+#
+# NOTE ON cv64 (see ADR-003):
+#   reference/docs/06-dcls-adaptation.md recommends cv64a6_imafdc_sv39 as V1
+#   config for generic DCLS projects. DCLS Rigoletto is rv32 (embedded safety);
+#   cv64 support deferred to V1-015+ pending DUT linker verification.
+#
+# TRIGGER (V1 / DCLS-V1-014):
+#   - workflow_dispatch: manual trigger (initial validation)
+#   - push to task/dcls-ci-tier1: dev branch auto-trigger during debugging
+#   NOTE: PR trigger (on: pull_request) added in DCLS-V1-016 (W15)
+#
+# MATRIX (8 jobs, parallel):
+#   cv32a60x × smoke-tests-dcls      (hello_world + return0)
+#   cv32a60x × dv-riscv-arch-test    (representative: rv32im-add-01, I+M extension)
+#   cv32a60x × dv-riscv-tests-p      (representative: rv32ui-p-add, U-mode physical)
+#   cv32a60x × dv-riscv-compliance   (representative: rv32im-MUL, M-extension)
+#   cv32a65x × smoke-tests-dcls      (hello_world + return0)
+#   cv32a65x × dv-riscv-arch-test    (full testlist: ~147 tests, I+C+M+Zba/Zbb)
+#   cv32a65x × dv-riscv-tests-p      (full testlist: ~65 ISA tests, physical mode)
+#   cv32a60x × dcls-custom-tests     (DCLS-specific: ALU/mem/CSR/lockstep/exception)
+#
+# REFERENCE:
+#   - ADR-003:  3_Knowledge/Decisions/ADR-003_target_config_selection.md
+#   - Template: 10_ci/reference/templates/workflows/tier1-pr-gate.yml
+#   - Task:     5_Tasks/repo/DCLS_v1_2026_Feb/DCLS-V1-014_github_actions_tier1_ci.md
+# ================================================================================
+
+name: dcls-ci-tier1-v2
+
+on:
+  workflow_dispatch:          # Manual trigger — primary trigger for V1
+  push:
+    branches:
+      - task/dcls-ci-tier1-v2   # Dev branch: auto-trigger for debugging
+
+concurrency:
+  group: dcls-ci-tier1-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SPIKE_TANDEM: 1             # Enable Spike ISS tandem checking (RTL vs ISS comparison)
+  NUM_JOBS: 8                 # Parallel make jobs
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 1: Build and cache tools (Verilator, Spike, RISC-V toolchain)
+  # Runs once; test jobs restore from cache without rebuilding.
+  # ─────────────────────────────────────────────────────────────────────────────
+  setup-tools:
+    name: Setup Tools
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup CVA6 Environment
+        uses: ./.github/actions/setup-cva6-env
+        with:
+          install-tools: "true"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 2: Execute test matrix (8 jobs in parallel, cv32a60x + cv32a65x)
+  # Job naming follows dashboard convention: testcase (config)
+  # ─────────────────────────────────────────────────────────────────────────────
+  execute-tests-tier1:
+    name: ${{ matrix.testcase }} (${{ matrix.config }})
+    runs-on: ubuntu-latest
+    needs: setup-tools
+    strategy:
+      fail-fast: false        # Always false: see ALL failures, not just the first
+      matrix:
+        include:
+
+          # ══════════════════════════════════════════════════════════════════
+          # CONFIG: cv32a60x — rv32imc+Zba/Zbb, no MMU
+          # Primary config: 47/47 ISA PASS validated locally (ADR-003)
+          # ══════════════════════════════════════════════════════════════════
+
+          # 1. Smoke test: hello_world + return0 via DCLS wrapper (cv32a60x)
+          - config: cv32a60x
+            testcase: smoke-tests-dcls
+            mode: script
+            simulator: veri-testharness,spike
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+
+          # 2. RISC-V Architecture Test — representative test (cv32a60x)
+          #    Tier-1: rv32im-add-01 (I-ext ADD, known passing on cv32a60x)
+          #    AMO tests (A-ext) are in this testlist but cv32a60x has no A extension → skip
+          #    Full suite (Tier-2 daily) — remove test_name to run all ~147 tests
+          - config: cv32a60x
+            testcase: dv-riscv-arch-test
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-arch-test
+            testlist: "../tests/testlist_riscv-arch-test-cv32a60x.yaml"
+            test_name: "rv32im-add-01"
+            linker: "../tests/riscv-arch-test/riscv-target/spike/link.ld"
+
+          # 3. RISC-V ISA Tests (physical mode) — representative test (cv32a60x)
+          #    Tier-1: rv32ui-p-add (U-mode, known passing on cv32a60x)
+          #    S-mode tests (rv32si-p-*) are in this testlist but cv32a60x has no S-mode → skip
+          #    Full suite (Tier-2 daily) — remove test_name to run all ~65 ISA tests
+          - config: cv32a60x
+            testcase: dv-riscv-tests-p
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-tests
+            testlist: "../tests/testlist_riscv-tests-cv32a60x-p.yaml"
+            test_name: "rv32ui-p-add"
+            linker: ""
+
+          # 4. RISC-V Compliance — rv32i/m/c compliance suite (cv32a60x)
+          #    Tier-1: run representative rv32im-MUL (M-extension compliance check)
+          #    Full suite (133 tests) is Tier-2 (daily). Full run: remove test_name.
+          - config: cv32a60x
+            testcase: dv-riscv-compliance
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-compliance
+            testlist: "../tests/testlist_riscv-compliance-cv32a60x.yaml"
+            test_name: "rv32im-MUL"
+            linker: ""
+
+          # NOTE: dv-riscv-csr-access (cv32a60x) intentionally omitted from Tier-1.
+          #   The CSR asm tests (M_RW_CSR etc.) write arbitrary values to CSRs and check
+          #   exact read-back values. These are incompatible with cv32a60x spike.yaml
+          #   write masks (mstatus_write_mask=136, mtval_write_mask=0, unified_traps=true).
+          #   Spike exits non-zero → test fails. CSR coverage provided by dcls-custom-tests
+          #   (dcls_csr_check.c) which uses inline asm and tolerates Spike's masked behavior.
+          #   Full CSR asm suite: Tier-2 (daily) or manual validation.
+
+          # ══════════════════════════════════════════════════════════════════
+          # CONFIG: cv32a65x — rv32imc variant 65x, no MMU
+          # Upstream ci.yml green config; in reference KNOWN_CONFIGS (ADR-003)
+          # ══════════════════════════════════════════════════════════════════
+
+          # 6. Smoke test: hello_world + return0 via DCLS wrapper (cv32a65x)
+          - config: cv32a65x
+            testcase: smoke-tests-dcls
+            mode: script
+            simulator: veri-testharness,spike
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+
+          # 7. RISC-V Architecture Test — full suite ~147 tests: I+C+M+Zba/Zbb (cv32a65x)
+          - config: cv32a65x
+            testcase: dv-riscv-arch-test
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-arch-test
+            testlist: "../tests/testlist_riscv-arch-test-cv32a65x.yaml"
+            test_name: ""
+            linker: "../tests/riscv-arch-test/riscv-target/spike/link.ld"
+
+          # 8. RISC-V ISA Tests (physical mode) — full suite (cv32a65x)
+          #    Note: no v-mode testlist for cv32a65x in this repo
+          - config: cv32a65x
+            testcase: dv-riscv-tests-p
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-tests
+            testlist: "../tests/testlist_riscv-tests-cv32a65x-p.yaml"
+            test_name: ""
+            linker: ""
+
+          # ══════════════════════════════════════════════════════════════════
+          # DCLS CUSTOM TESTS — UniBo hmr_unit / dmr_checker targeted coverage
+          # Tests cover: ALU paths, D-cache 4 ports, CSR in DMR mode,
+          #              lockstep stress, exception handling
+          # ══════════════════════════════════════════════════════════════════
+
+          # 9. DCLS custom tests — ALU/mem/CSR/lockstep/exception (cv32a60x)
+          - config: cv32a60x
+            testcase: dcls-custom-tests
+            mode: script
+            simulator: veri-testharness,spike
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Restore cached tools (no rebuild — setup-tools already did it)
+      - name: Setup CVA6 Environment
+        uses: ./.github/actions/setup-cva6-env
+        # No install-tools: "true" here — just restores cache + sets env
+
+      - name: Install prerequisites
+        run: source ci/install-prereq.sh
+
+      - name: Run Tier 1 V2 — ${{ matrix.testcase }} (${{ matrix.config }})
+        run: |
+          set -x
+          mkdir -p ci-results
+          echo "1" > ci-results/exit_code
+          source verif/sim/setup-env.sh
+          rc=0
+
+          CC_OPTS="-static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles \
+            -g ../tests/custom/common/syscalls.c ../tests/custom/common/crt.S \
+            -I../tests/custom/env -I../tests/custom/common -lgcc"
+
+          if [ "${{ matrix.mode }}" = "script" ]; then
+            # Mode: script — run a regression shell script directly
+            # Pass config via DV_TARGET so smoke-tests-dcls.sh can parametrize
+            export DV_TARGET=${{ matrix.config }}
+            export DV_SIMULATORS=${{ matrix.simulator }}
+            source verif/regress/${{ matrix.testcase }}.sh || rc=$?
+
+          elif [ "${{ matrix.mode }}" = "testlist" ]; then
+            # Mode: testlist — run cva6.py with a testlist + single-test filter
+            if [[ "${{ matrix.simulator }}" == *"veri-testharness"* ]]; then
+              source verif/regress/install-verilator.sh
+            fi
+            source verif/regress/install-spike.sh
+            if [ -n "${{ matrix.install_script }}" ]; then
+              source verif/regress/${{ matrix.install_script }}.sh
+            fi
+            LINKER_OPT=""
+            [ -n "${{ matrix.linker }}" ] && LINKER_OPT="--linker=${{ matrix.linker }}"
+            TEST_OPT=""
+            [ -n "${{ matrix.test_name }}" ] && TEST_OPT="--test ${{ matrix.test_name }}"
+            cd verif/sim
+            python3 cva6.py \
+              --testlist=${{ matrix.testlist }} \
+              --target ${{ matrix.config }} \
+              --iss_yaml=cva6.yaml \
+              --iss=${{ matrix.simulator }} \
+              --issrun_opts="+tb_performance_mode+debug_disable=1+UVM_VERBOSITY=UVM_NONE" \
+              $LINKER_OPT $TEST_OPT || rc=$?
+            cd -
+          fi
+
+          echo "$rc" > ci-results/exit_code
+          exit $rc
+
+      # Collect simulation logs into ci-results/ for artifact upload.
+      # Copies iss_regr.log + spike/verilator sim outputs from verif/sim/out_*/
+      # so the artifact mirrors the reference structure in ci_reference/artifacts_example/.
+      - name: Collect simulation logs
+        if: always()
+        run: |
+          # Find the most recent sim output directory (cva6.py creates out_YYYY-MM-DD/)
+          SIM_OUT=$(ls -dt verif/sim/out_*/ 2>/dev/null | head -1)
+          if [ -n "$SIM_OUT" ]; then
+            # Copy regression summary log (PASS/FAIL per test)
+            [ -f "${SIM_OUT}iss_regr.log" ] && cp "${SIM_OUT}iss_regr.log" ci-results/iss_regr.log
+            # Copy spike ISS logs (.log, .log.iss) — contains Spike trace and ISS output
+            mkdir -p ci-results/spike_sim
+            find "${SIM_OUT}spike_sim/" -maxdepth 1 \( -name "*.log" -o -name "*.log.iss" -o -name "*.csv" \) \
+              -exec cp {} ci-results/spike_sim/ \; 2>/dev/null || true
+            # Copy verilator sim logs — contains RTL execution trace and comparison result
+            mkdir -p ci-results/veri-testharness_sim
+            find "${SIM_OUT}veri-testharness_sim/" -maxdepth 1 \
+              \( -name "*.log" -o -name "*.log.iss" -o -name "*.csv" -o -name "*.log.yaml" \) \
+              -exec cp {} ci-results/veri-testharness_sim/ \; 2>/dev/null || true
+          fi
+
+      - name: Upload CI results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tier1-results-${{ matrix.config }}-${{ matrix.testcase }}
+          path: ci-results/
+          retention-days: 7
