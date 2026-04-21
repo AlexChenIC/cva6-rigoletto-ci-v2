@@ -52,6 +52,8 @@ CC_OPTS="-static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -g 
 
 LINKER=../../config/gen_from_riscv_config/$DV_TARGET/linker/link.ld
 
+RC=0
+
 cd verif/sim/
 
 # ── Test 1: hello_world ─────────────────────────────────────────────────────
@@ -60,7 +62,7 @@ make -C ../.. clean
 make clean_all
 python3 cva6.py --c_tests ../tests/custom/hello_world/hello_world.c \
   --iss_yaml cva6.yaml --target $DV_TARGET --iss=$DV_SIMULATORS \
-  --linker=$LINKER --gcc_opts="$CC_OPTS" $DV_OPTS
+  --linker=$LINKER --gcc_opts="$CC_OPTS" $DV_OPTS || RC=$((RC + 1))
 make -C ../.. clean
 make clean_all
 
@@ -70,8 +72,16 @@ make -C ../.. clean
 make clean_all
 python3 cva6.py --c_tests ../tests/custom/return0/return0.c \
   --iss_yaml cva6.yaml --target $DV_TARGET --iss=$DV_SIMULATORS \
-  --linker=$LINKER --gcc_opts="$CC_OPTS" $DV_OPTS
+  --linker=$LINKER --gcc_opts="$CC_OPTS" $DV_OPTS || RC=$((RC + 1))
 make -C ../.. clean
 make clean_all
 
 cd -
+
+if [ $RC -ne 0 ]; then
+  echo "DCLS smoke tests FAILED: $RC test(s) failed"
+else
+  echo "DCLS smoke tests PASSED: all tests passed"
+fi
+
+return $RC

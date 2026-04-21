@@ -2,34 +2,29 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 # ================================================================================
-# DCLS CVA6 CI - Tier 1: Fast Verilator Sanity (Version 2)
+# DCLS CVA6 CI - Tier 2: Daily Verilator Regression (Version 2)
 # ================================================================================
 #
 # Base workflow:
-#   Derived from the reviewed OpenHW tier-1 workflow for CVA6, then adapted for
+#   Derived from the reviewed OpenHW tier-2 workflow for CVA6, then adapted for
 #   the rigoletto-devel integration branch.
 #
 # DCLS overlay:
 #   - Preserve DCLS smoke coverage on rv32 targets via smoke-tests-dcls
-#   - Preserve DCLS targeted coverage via dcls-custom-tests
-#   - Keep the upstream green-config baseline jobs so V2 stays aligned with the
-#     current OpenHW CI structure
+#   - Preserve dcls-custom-tests as the current dedicated DCLS regression entry
+#   - Keep the upstream RV32/RV64 curated regression matrix for alignment with
+#     the latest OpenHW CI policy
 # ================================================================================
 
-name: dcls-ci-tier1-v2
+name: dcls-ci-tier2-v2
 
 on:
-  pull_request:
-    branches:
-      - rigoletto-devel
-  push:
-    branches:
-      - rigoletto-devel
-      - task/dcls-ci-tier1-v2
+  schedule:
+    - cron: "0 22 * * *"
   workflow_dispatch:
 
 concurrency:
-  group: dcls-ci-tier1-v2-${{ github.ref }}
+  group: dcls-ci-tier2-v2-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -51,7 +46,7 @@ jobs:
         with:
           install-tools: "true"
 
-  execute-rv32-tier1:
+  execute-rv32-tier2:
     name: ${{ matrix.testcase }} (${{ matrix.config }})
     runs-on: ubuntu-latest
     needs: setup-tools
@@ -60,7 +55,7 @@ jobs:
       matrix:
         include:
           # ----------------------------------------------------------
-          # OpenHW reviewed baseline jobs
+          # OpenHW reviewed baseline jobs: cv32a65x
           # ----------------------------------------------------------
           - config: cv32a65x
             testcase: smoke-tests-cv32a65x
@@ -72,8 +67,151 @@ jobs:
             linker: ""
             hwconfig_opts: ""
 
+          - config: cv32a65x
+            testcase: cv32a6_tests
+            mode: script
+            simulator: veri-testharness,spike
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv32a65x
+            testcase: dv-riscv-arch-test
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-arch-test
+            testlist: "../tests/testlist_riscv-arch-test-cv32a65x.yaml"
+            test_name: ""
+            linker: "../tests/riscv-arch-test/riscv-target/spike/link.ld"
+            hwconfig_opts: ""
+
+          - config: cv32a65x
+            testcase: dv-riscv-tests-p
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-tests
+            testlist: "../tests/testlist_riscv-tests-cv32a65x-p.yaml"
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv32a65x
+            testcase: dv-riscv-compliance
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-compliance
+            testlist: "../tests/testlist_riscv-compliance-cv32a65x.yaml"
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv32a65x
+            testcase: dv-riscv-csr-access-test
+            mode: script
+            simulator: veri-testharness,spike
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv32a65x
+            testcase: dv-csr-embedded-tests
+            mode: script
+            simulator: veri-testharness
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv32a65x
+            testcase: hwconfig_tests
+            mode: script
+            simulator: veri-testharness,spike
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+            hwconfig_opts: cv32a65x
+
+          - config: cv32a65x
+            testcase: coremark
+            mode: script
+            simulator: veri-testharness
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+            hwconfig_opts: cv32a65x
+
+          - config: cv32a65x
+            testcase: benchmark
+            mode: script
+            simulator: veri-testharness,spike
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          # ----------------------------------------------------------
+          # OpenHW reviewed baseline jobs: cv32a60x
+          # ----------------------------------------------------------
           - config: cv32a60x
             testcase: cv32a6_tests
+            mode: script
+            simulator: veri-testharness,spike
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv32a60x
+            testcase: dv-riscv-arch-test
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-arch-test
+            testlist: "../tests/testlist_riscv-arch-test-cv32a60x.yaml"
+            test_name: ""
+            linker: "../tests/riscv-arch-test/riscv-target/spike/link.ld"
+            hwconfig_opts: ""
+
+          - config: cv32a60x
+            testcase: dv-riscv-tests-p
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-tests
+            testlist: "../tests/testlist_riscv-tests-cv32a60x-p.yaml"
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv32a60x
+            testcase: dv-riscv-compliance
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-compliance
+            testlist: "../tests/testlist_riscv-compliance-cv32a60x.yaml"
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv32a60x
+            testcase: dv-riscv-csr-access-test
+            mode: script
+            simulator: veri-testharness,spike
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv32a60x
+            testcase: benchmark
             mode: script
             simulator: veri-testharness,spike
             install_script: ""
@@ -129,7 +267,7 @@ jobs:
       - name: Install prerequisites
         run: source ci/install-prereq.sh
 
-      - name: Run Tier 1 for ${{ matrix.config }} / ${{ matrix.testcase }}
+      - name: Run Tier 2 for ${{ matrix.config }} / ${{ matrix.testcase }}
         run: |
           set -x
           mkdir -p ci-results
@@ -202,11 +340,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tier1-rv32-${{ matrix.config }}-${{ matrix.testcase }}
+          name: tier2-rv32-${{ matrix.config }}-${{ matrix.testcase }}
           path: ci-results/
           retention-days: 14
 
-  execute-rv64-tier1:
+  execute-rv64-tier2:
     name: ${{ matrix.testcase }} (${{ matrix.config }})
     runs-on: ubuntu-latest
     needs: setup-tools
@@ -216,6 +354,56 @@ jobs:
         include:
           - config: cv64a6_imafdc_sv39_hpdcache_wb
             testcase: cv64a6_imafdc_tests
+            mode: script
+            simulator: veri-testharness,spike
+            install_script: ""
+            testlist: ""
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv64a6_imafdc_sv39_hpdcache_wb
+            testcase: dv-riscv-arch-test
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-arch-test
+            testlist: "../tests/testlist_riscv-arch-test-cv64a6_imafdc_sv39.yaml"
+            test_name: ""
+            linker: "../tests/riscv-arch-test/riscv-target/spike/link.ld"
+            hwconfig_opts: ""
+
+          - config: cv64a6_imafdc_sv39_hpdcache_wb
+            testcase: dv-riscv-tests-v
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-tests
+            testlist: "../tests/testlist_riscv-tests-cv64a6_imafdc_sv39-v.yaml"
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv64a6_imafdc_sv39_hpdcache_wb
+            testcase: dv-riscv-tests-p
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-tests
+            testlist: "../tests/testlist_riscv-tests-cv64a6_imafdc_sv39-p.yaml"
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv64a6_imafdc_sv39_hpdcache_wb
+            testcase: dv-riscv-compliance
+            mode: testlist
+            simulator: veri-testharness,spike
+            install_script: install-riscv-compliance
+            testlist: "../tests/testlist_riscv-compliance-cv64a6_imafdc_sv39.yaml"
+            test_name: ""
+            linker: ""
+            hwconfig_opts: ""
+
+          - config: cv64a6_imafdc_sv39_hpdcache_wb
+            testcase: benchmark
             mode: script
             simulator: veri-testharness,spike
             install_script: ""
@@ -235,7 +423,7 @@ jobs:
       - name: Install prerequisites
         run: source ci/install-prereq.sh
 
-      - name: Run Tier 1 for ${{ matrix.config }} / ${{ matrix.testcase }}
+      - name: Run Tier 2 for ${{ matrix.config }} / ${{ matrix.testcase }}
         run: |
           set -x
           mkdir -p ci-results
@@ -308,6 +496,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tier1-rv64-${{ matrix.config }}-${{ matrix.testcase }}
+          name: tier2-rv64-${{ matrix.config }}-${{ matrix.testcase }}
           path: ci-results/
           retention-days: 14
