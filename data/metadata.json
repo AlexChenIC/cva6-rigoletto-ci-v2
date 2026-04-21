@@ -1,0 +1,9 @@
+{
+  "generated_at": "2026-04-21T08:28:08.514639+00:00",
+  "repo": "AlexChenIC/cva6-rigoletto-ci-v2",
+  "workflows": [
+    "ci",
+    "dcls-ci-tier1-v2",
+    "dcls-ci-tier2-v2"
+  ]
+}
