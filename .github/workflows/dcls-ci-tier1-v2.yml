@@ -42,6 +42,7 @@ on:
   workflow_dispatch:          # Manual trigger — primary trigger for V1
   push:
     branches:
+      - rigoletto-devel         # Primary V2 integration branch
       - task/dcls-ci-tier1-v2   # Dev branch: auto-trigger for debugging
 
 concurrency:
