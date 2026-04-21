@@ -6,7 +6,7 @@
 # or manually / on a daily schedule.
 #
 # Tracks three workflows:
-#   ci              — ci.yml (Legacy CVA6 CI)
+#   ci              — ci.yml (UniBo branch, non-upstream)
 #   dcls-ci-tier1-v2   — Version 2 Tier 1 PR Gate
 #   dcls-ci-tier2-v2   — Version 2 Tier 2 Nightly (future)
 #

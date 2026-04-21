@@ -6,7 +6,7 @@ Reads per-workflow JSON files and renders a Jinja2 template into
 a self-contained static HTML file.
 
 Workflows displayed:
-  ci              — ci.yml (Legacy Base)
+  ci              — ci.yml (UniBo branch, non-upstream)
   dcls-ci-tier1-v2   — DCLS Tier 1 (PR Gate, V2)
   dcls-ci-tier2-v2   — DCLS Tier 2 (Daily Verilator, future)
 """
@@ -21,7 +21,7 @@ from jinja2 import Environment, FileSystemLoader
 
 # Workflow display info (order = left-to-right in UI overview cards)
 WORKFLOW_INFO = [
-    {"key": "ci",            "display_name": "ci.yml (Legacy Base)",        "file": "runs_ci.json"},
+    {"key": "ci",            "display_name": "ci.yml (UniBo branch, non-upstream)", "file": "runs_ci.json"},
     {"key": "dcls-ci-tier1-v2", "display_name": "Tier 1 (PR Gate, V2)",       "file": "runs_dcls-ci-tier1-v2.json"},
     {"key": "dcls-ci-tier2-v2", "display_name": "Tier 2 (Daily Verilator, V2)", "file": "runs_dcls-ci-tier2-v2.json"},
 ]

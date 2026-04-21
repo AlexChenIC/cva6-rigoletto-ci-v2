@@ -6,7 +6,7 @@ Uses `gh api` (pre-installed on GHA runners, auto-authenticated).
 Produces per-workflow JSON files with incremental updates.
 
 Tracks three workflows:
-  ci              — ci.yml (Legacy, upstream CVA6 CI)
+  ci              — ci.yml (UniBo branch, non-upstream)
   dcls-ci-tier1-v2   — dcls-ci-tier1-v2.yml (DCLS Tier 1 PR Gate)
   dcls-ci-tier2-v2   — dcls-ci-tier2-v2.yml (DCLS Tier 2 Nightly, future)
 """
