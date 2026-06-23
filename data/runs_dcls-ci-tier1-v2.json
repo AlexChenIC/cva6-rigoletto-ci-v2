@@ -1,5 +1,93 @@
 [
   {
+    "id": 28044786578,
+    "source": "github-actions",
+    "simulator": "verilator",
+    "run_number": 5,
+    "status": "completed",
+    "conclusion": "failure",
+    "html_url": "https://github.com/AlexChenIC/cva6-rigoletto-ci-v2/actions/runs/28044786578",
+    "head_branch": "dependabot/submodules/verif/core-v-verif-f3b1f97",
+    "head_sha": "103d22ec",
+    "event": "pull_request",
+    "created_at": "2026-06-23T17:34:36Z",
+    "updated_at": "2026-06-23T18:00:28Z",
+    "run_started_at": "2026-06-23T17:34:36Z",
+    "duration_seconds": 1552,
+    "total_jobs": 6,
+    "passed_jobs": 5,
+    "failed_jobs": 1,
+    "skipped_jobs": 0,
+    "jobs": [
+      {
+        "name": "smoke-tests-cv32a65x (cv32a65x)",
+        "conclusion": "success",
+        "started_at": "2026-06-23T17:52:25Z",
+        "completed_at": "2026-06-23T17:55:24Z",
+        "duration_seconds": 179,
+        "html_url": "https://github.com/AlexChenIC/cva6-rigoletto-ci-v2/actions/runs/28044786578/job/83023536287",
+        "arch": "rv32",
+        "config": "cv32a65x",
+        "testcase": "smoke-tests-cv32a65x"
+      },
+      {
+        "name": "cv64a6_imafdc_tests (cv64a6_imafdc_sv39_hpdcache_wb)",
+        "conclusion": "failure",
+        "started_at": "2026-06-23T17:52:25Z",
+        "completed_at": "2026-06-23T18:00:28Z",
+        "duration_seconds": 483,
+        "html_url": "https://github.com/AlexChenIC/cva6-rigoletto-ci-v2/actions/runs/28044786578/job/83023536289",
+        "arch": "rv64",
+        "config": "cv64a6_imafdc_sv39_hpdcache_wb",
+        "testcase": "cv64a6_imafdc_tests"
+      },
+      {
+        "name": "dcls-custom-tests (cv32a60x)",
+        "conclusion": "success",
+        "started_at": "2026-06-23T17:52:25Z",
+        "completed_at": "2026-06-23T17:58:09Z",
+        "duration_seconds": 344,
+        "html_url": "https://github.com/AlexChenIC/cva6-rigoletto-ci-v2/actions/runs/28044786578/job/83023536321",
+        "arch": "rv32",
+        "config": "cv32a60x",
+        "testcase": "dcls-custom-tests"
+      },
+      {
+        "name": "smoke-tests-dcls (cv32a60x)",
+        "conclusion": "success",
+        "started_at": "2026-06-23T17:52:25Z",
+        "completed_at": "2026-06-23T17:56:13Z",
+        "duration_seconds": 228,
+        "html_url": "https://github.com/AlexChenIC/cva6-rigoletto-ci-v2/actions/runs/28044786578/job/83023536345",
+        "arch": "rv32",
+        "config": "cv32a60x",
+        "testcase": "smoke-tests-dcls"
+      },
+      {
+        "name": "smoke-tests-dcls (cv32a65x)",
+        "conclusion": "success",
+        "started_at": "2026-06-23T17:52:25Z",
+        "completed_at": "2026-06-23T17:56:23Z",
+        "duration_seconds": 238,
+        "html_url": "https://github.com/AlexChenIC/cva6-rigoletto-ci-v2/actions/runs/28044786578/job/83023536368",
+        "arch": "rv32",
+        "config": "cv32a65x",
+        "testcase": "smoke-tests-dcls"
+      },
+      {
+        "name": "cv32a6_tests (cv32a60x)",
+        "conclusion": "success",
+        "started_at": "2026-06-23T17:52:25Z",
+        "completed_at": "2026-06-23T17:55:26Z",
+        "duration_seconds": 181,
+        "html_url": "https://github.com/AlexChenIC/cva6-rigoletto-ci-v2/actions/runs/28044786578/job/83023536408",
+        "arch": "rv32",
+        "config": "cv32a60x",
+        "testcase": "cv32a6_tests"
+      }
+    ]
+  },
+  {
     "id": 26922456579,
     "source": "github-actions",
     "simulator": "verilator",
